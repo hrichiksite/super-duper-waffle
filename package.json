@@ -1,0 +1,15 @@
+{
+  "name": "super-duper-waffle",
+  "version": "1.0.0",
+  "description": "An awesome bot that'll be you for a while on whatsapp!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.25.0"
+  }
+}

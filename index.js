@@ -48,6 +48,8 @@ async function query(input) {
 
 // Listening to all incoming messages
 client.on('message', async message => {
+    message.react("🤖");
+    try{
     console.log(`Received message from ${message.from}: ${message.body}`);
     //only reply if the message is from a allowed number
     //check if the message is from a allowed number
@@ -175,9 +177,13 @@ client.on('message', async message => {
         if (response.success) {
             //send the response
             message.reply(response.result.response.trim());
+            message.react("✅");
         }
     });
-
+} catch (e) {
+    console.error(e);
+    message.react("❌");
+}
 
 });
 

@@ -57,7 +57,14 @@ client.on('message', async message => {
         console.log('Message from not allowed number, ignoring');
         return;
     }
-    //TODO: append allowlist during a session
+    // append allowlist during a session
+    if (message.body.startsWith("!allowlist-code supersecretcode")) {
+        //add the number to the allowed list
+        const contact = await message.getContact();
+        allowedNumbers.push(contact.id);
+        message.reply("Added to allowed list");
+        return; 
+    }
 
     if (message.body === '!ping') {
         client.sendMessage(message.from, 'pong');
@@ -82,9 +89,16 @@ client.on('message', async message => {
     //messages from others would be user messages
 
     //change system prompt if the user is a friend
-    //TODO: add a way to add friends
-
-    const isFriend = !!name.includes("Friend");
+    // add a way to add friends
+    // if the recent messages contain the a secret code, add the user to the friends list
+    var friendsList = [];
+    var isFriend = !!name.includes("Friend") || friendsList.includes(name);
+    if(message.body.startsWith("!add-friend-code supersecretcode")) {
+        //add the number to the allowed list
+        friendsList.push(name);
+        message.reply("Added to friends list");
+        return; 
+    }
 
     const messagesArray = [];
     var systemPrompt = `You are a human who has taken my place. 
@@ -117,6 +131,11 @@ client.on('message', async message => {
         if (startNewChat) {
             return false;
         }
+        //if message is a command, ignore
+        if (thismessage.body.startsWith("!")) {
+            return true;
+        }
+        
         console.log(thismessage.hasMedia);
         let appendmsgbody = thismessage.body
         // if (thismessage.hasMedia) {

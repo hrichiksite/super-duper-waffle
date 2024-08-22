@@ -16,6 +16,7 @@ client.on('qr', qr => {
 
 //AI function
 async function run(model, input) {
+    //console.log(JSON.stringify(input))
     const response = await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACC_ID}/ai/run/${model}`,
         {
@@ -63,7 +64,7 @@ client.on('message', async message => {
     //{ role: 'user', content: 'Say this is a test' }
     //messages from me would be assistant messages
     //messages from others would be user messages
-    
+
     //change system prompt if the user is a friend
     //TODO: add a way to add friends
 
@@ -83,38 +84,68 @@ client.on('message', async message => {
         If the user says "can you share me the notes for the class" you respond with "I'm busy right now, can I share it later?"
         
         keep it simple, keep it short, keep it human.
+
+        You can view images when sent by the user, the description will be generated for you, prefixed with "GENERATED IMAGE DESCRIPTION".
         
         USE AS LITTLE WORDS AS POSSIBLE, and keep it simple.`
     messages.reverse();
     let startNewChat = false;
-    messages.every((thismessage) => {
+    let ac = messages.every(async (thismessage) => {
+        
         //if empty message, ignore
-        if (thismessage.body === "") {
+        if (thismessage.body === "" && !thismessage.hasMedia) {
             return true;
         }
         //if new context is started, stop the loop
-        if (message.body.startsWith("!contextboundary")) {
+        if (thismessage.body.startsWith("!contextboundary")) {
             startNewChat = true;
         }
         if (startNewChat) {
             return false;
         }
-        if(thismessage.hasMedia){
-            //ignore media messages
-            return true;
-            //TODO: handle media messages, send to llava
-        }
+        console.log(thismessage.hasMedia);
+        // if (thismessage.hasMedia) {
+        //     //download the media
+        //     const msgmedia = await thismessage.downloadMedia();
+        //     console.log(msgmedia);
+        //     const res = await fetch("https://cataas.com/cat");
+        //     const blob = await res.arrayBuffer();
+        //     //base64 encode the media
+        //     //const base64 = Buffer.from(blob).toString('base64');
+        //     if (msgmedia.mimetype.includes("image")) {
+        //         //convert the image from base64 to unit8array
+        //         const input = {
+        //             image: [new Uint8Array(blob)],
+        //             prompt: "Generate a caption for this image",
+        //             max_tokens: 512,
+        //           };
+        //         // const input = {
+        //         //     image: new Uint8Array(Buffer.from(msgmedia.data, 'base64')),
+        //         //     prompt: "Generate a description for this image",
+        //         //     max_tokens: 200,
+        //         //   };
+        //           console.log(input)
+        //         run("@cf/llava-hf/llava-1.5-7b-hf", input).then((response) => {
+        //             console.log(response);
+        //             if (response.success) {
+        //                 thismessage.body += "\n\n" + "GENERATED IMAGE DESCRIPTION" + response.result.response.trim();
+        //             }
+        //         })
+        //     }
+        // }
         messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: thismessage.body });
         return true;
     });
+    console.log(ac);
+    console.log(messagesArray);
+
     messagesArray.reverse();
-    if(startNewChat){
+    if (message.body.startsWith("!contextboundary") || messagesArray.length === 0) {
         //do not reply to a boundary message
         return;
     }
 
     messagesArray.unshift({ role: "system", content: systemPrompt });
-    console.log(messagesArray);
     run("@hf/thebloke/zephyr-7b-beta-awq", {
         messages: messagesArray,
         max_tokens: 50,

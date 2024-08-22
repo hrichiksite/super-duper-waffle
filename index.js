@@ -100,8 +100,6 @@ client.on('message', async message => {
         If the user says "can you share me the notes for the class" you respond with "I'm busy right now, can I share it later?"
         
         keep it simple, keep it short, keep it human.
-
-        You can view images when sent by the user, the description will be generated for you, prefixed with "GENERATED IMAGE DESCRIPTION".
         
         USE AS LITTLE WORDS AS POSSIBLE, and keep it simple.`
     messages.reverse();

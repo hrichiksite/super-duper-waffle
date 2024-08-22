@@ -106,7 +106,7 @@ client.on('message', async message => {
         USE AS LITTLE WORDS AS POSSIBLE, and keep it simple.`
     messages.reverse();
     let startNewChat = false;
-    let ac = messages.every(async (thismessage) => {
+    messages.every(async (thismessage) => {
         
         //if empty message, ignore
         if (thismessage.body === "" && !thismessage.hasMedia) {
@@ -120,25 +120,28 @@ client.on('message', async message => {
             return false;
         }
         console.log(thismessage.hasMedia);
-        if (thismessage.hasMedia) {
-            //download the media
-            const msgmedia = await thismessage.downloadMedia();
-            console.log(msgmedia);
-            if (msgmedia.mimetype.includes("image")) {
-                //convert the image from base64 to unit8array
-                query(Buffer.from(msgmedia.data, 'base64')).then((response) => {
-                    console.log(response);
-                    if (response.generated_text) {
-                        thismessage.body += "\n\n" + "GENERATED IMAGE DESCRIPTION" + response.generated_text.trim();
-                    }
-                })
-            }
-        }
-        messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: thismessage.body });
+        let appendmsgbody = thismessage.body
+        // if (thismessage.hasMedia) {
+        //     //download the media
+        //     const msgmedia = await thismessage.downloadMedia();
+        //     console.log(msgmedia);
+        //     if (msgmedia.mimetype.includes("image")) {
+        //         query(Buffer.from(msgmedia.data, 'base64')).then((response) => {
+        //             console.log(response);
+        //             if (response.generated_text) {
+        //                 appendmsgbody += "\n\n" + "GENERATED IMAGE DESCRIPTION" + response.generated_text.trim();
+        //                 messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: appendmsgbody });
+        //                 return true;
+        //             }
+        //         })
+        //     }
+        // } else {
+        messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: appendmsgbody });
         return true;
+        // }
     });
-    console.log(ac);
-    console.log(messagesArray);
+    //console.log(ac);
+    console.log(messagesArray, 'messagesArray');
 
     messagesArray.reverse();
     if (message.body.startsWith("!contextboundary") || messagesArray.length === 0) {

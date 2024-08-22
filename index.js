@@ -16,7 +16,6 @@ client.on('qr', qr => {
 
 //AI function
 async function run(model, input) {
-    //console.log(JSON.stringify(input))
     const response = await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACC_ID}/ai/run/${model}`,
         {
@@ -28,6 +27,23 @@ async function run(model, input) {
     const result = await response.json();
     return result;
 }
+
+async function query(input) {
+	const response = await fetch(
+		"https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large",
+		{
+			headers: {
+				Authorization: "Bearer " + process.env.HF_API_TOKEN,
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+			body: input,
+		}
+	);
+	const result = await response.json();
+	return result;
+}
+
 
 
 // Listening to all incoming messages
@@ -104,35 +120,20 @@ client.on('message', async message => {
             return false;
         }
         console.log(thismessage.hasMedia);
-        // if (thismessage.hasMedia) {
-        //     //download the media
-        //     const msgmedia = await thismessage.downloadMedia();
-        //     console.log(msgmedia);
-        //     const res = await fetch("https://cataas.com/cat");
-        //     const blob = await res.arrayBuffer();
-        //     //base64 encode the media
-        //     //const base64 = Buffer.from(blob).toString('base64');
-        //     if (msgmedia.mimetype.includes("image")) {
-        //         //convert the image from base64 to unit8array
-        //         const input = {
-        //             image: [new Uint8Array(blob)],
-        //             prompt: "Generate a caption for this image",
-        //             max_tokens: 512,
-        //           };
-        //         // const input = {
-        //         //     image: new Uint8Array(Buffer.from(msgmedia.data, 'base64')),
-        //         //     prompt: "Generate a description for this image",
-        //         //     max_tokens: 200,
-        //         //   };
-        //           console.log(input)
-        //         run("@cf/llava-hf/llava-1.5-7b-hf", input).then((response) => {
-        //             console.log(response);
-        //             if (response.success) {
-        //                 thismessage.body += "\n\n" + "GENERATED IMAGE DESCRIPTION" + response.result.response.trim();
-        //             }
-        //         })
-        //     }
-        // }
+        if (thismessage.hasMedia) {
+            //download the media
+            const msgmedia = await thismessage.downloadMedia();
+            console.log(msgmedia);
+            if (msgmedia.mimetype.includes("image")) {
+                //convert the image from base64 to unit8array
+                query(Buffer.from(msgmedia.data, 'base64')).then((response) => {
+                    console.log(response);
+                    if (response.generated_text) {
+                        thismessage.body += "\n\n" + "GENERATED IMAGE DESCRIPTION" + response.generated_text.trim();
+                    }
+                })
+            }
+        }
         messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: thismessage.body });
         return true;
     });

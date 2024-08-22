@@ -17,16 +17,16 @@ client.on('qr', qr => {
 //AI function
 async function run(model, input) {
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACC_ID}/ai/run/${model}`,
-      {
-        headers: { Authorization: "Bearer "+process.env.CFAI_API_KEY },
-        method: "POST",
-        body: JSON.stringify(input),
-      }
+        `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACC_ID}/ai/run/${model}`,
+        {
+            headers: { Authorization: "Bearer " + process.env.CFAI_API_KEY },
+            method: "POST",
+            body: JSON.stringify(input),
+        }
     );
     const result = await response.json();
     return result;
-  }
+}
 
 
 // Listening to all incoming messages
@@ -57,16 +57,22 @@ client.on('message', async message => {
     //get chat
     const chat = await message.getChat();
 
-        //get last 30 messages
-        const messages = await chat.fetchMessages({ limit: 30 });
-        //get strings from messages, and format them like this:
-        //{ role: 'user', content: 'Say this is a test' }
-        //messages from me would be assistant messages
-        //messages from others would be user messages
-        
-        const messagesArray = [];
-        var systemPrompt = `You are a human who has taken my place. 
-        You're talking with my friends. You are talking with ${name} on WhatsApp. 
+    //get last 30 messages
+    const messages = await chat.fetchMessages({ limit: 30 });
+    //get strings from messages, and format them like this:
+    //{ role: 'user', content: 'Say this is a test' }
+    //messages from me would be assistant messages
+    //messages from others would be user messages
+    
+    //change system prompt if the user is a friend
+    //TODO: add a way to add friends
+
+    const isFriend = !!name.includes("Friend");
+
+    const messagesArray = [];
+    var systemPrompt = `You are a human who has taken my place. 
+        ${isFriend ? "You are talking to a friend of mine." : ""} 
+        You are talking with ${name} on WhatsApp. 
         You will talk naturally with them in short replies, reply accordingly, request time for any questions you can't answer by saying you're busy or similar excuse.
 
         Examples: 
@@ -79,29 +85,46 @@ client.on('message', async message => {
         keep it simple, keep it short, keep it human.
         
         USE AS LITTLE WORDS AS POSSIBLE, and keep it simple.`
-        messages.reverse();
-        messages.every((thismessage) => {
-            //if empty message, ignore
-            if(thismessage.body === ""){
-                return true;
-            }
-            messagesArray.push({role: thismessage.fromMe ? "assistant" : "user",  content: thismessage.body});
+    messages.reverse();
+    let startNewChat = false;
+    messages.every((thismessage) => {
+        //if empty message, ignore
+        if (thismessage.body === "") {
             return true;
-        });
-        messagesArray.reverse();
-        
-        messagesArray.unshift({role: "system", content: systemPrompt});
-        console.log(messagesArray);
+        }
+        //if new context is started, stop the loop
+        if (message.body.startsWith("!contextboundary")) {
+            startNewChat = true;
+        }
+        if (startNewChat) {
+            return false;
+        }
+        if(thismessage.hasMedia){
+            //ignore media messages
+            return true;
+            //TODO: handle media messages, send to llava
+        }
+        messagesArray.push({ role: thismessage.fromMe ? "assistant" : "user", content: thismessage.body });
+        return true;
+    });
+    messagesArray.reverse();
+    if(startNewChat){
+        //do not reply to a boundary message
+        return;
+    }
+
+    messagesArray.unshift({ role: "system", content: systemPrompt });
+    console.log(messagesArray);
     run("@hf/thebloke/zephyr-7b-beta-awq", {
         messages: messagesArray,
         max_tokens: 50,
-      }).then((response) => {
+    }).then((response) => {
         console.log(response);
-        if(response.success){
+        if (response.success) {
             //send the response
             message.reply(response.result.response.trim());
         }
-      });
+    });
 
 
 });
